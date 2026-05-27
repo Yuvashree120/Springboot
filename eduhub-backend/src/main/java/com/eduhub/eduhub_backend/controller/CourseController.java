@@ -1,6 +1,8 @@
+
 package com.eduhub.eduhub_backend.controller;
 
-import com.eduhub.eduhub_backend.component.CourseService;
+import com.eduhub.eduhub_backend.component.Course;
+import com.eduhub.eduhub_backend.exceptions.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -8,50 +10,89 @@ import org.springframework.web.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
 
+
+@RequestMapping("/course")
 @RestController
-@RequestMapping("Courses")
 public class CourseController {
 
-    private final CourseService courseService;
-    public CourseController(CourseService courseService){
-        this.courseService=courseService;
+    static List<Course>courseList=new ArrayList<>();
+    static {
+        courseList.add(new Course("CS101", "Python", 3));
+        courseList.add(new Course("CS102", "Java", 4));
+        courseList.add(new Course("CS103", "Sql", 4));
+        courseList.add(new Course("CS104", "C++", 3));
+        courseList.add(new Course("CS105", "DBMS", 3));
     }
-    @GetMapping("Course")
-    public ResponseEntity<List<CourseService>>getCourse() {
-        List<CourseService> CourseList = new ArrayList<>();
-        CourseList.add(new CourseService(115, "Springboot", 8));
-        CourseList.add(new CourseService(152,"Computer networks",7));
-        CourseList.add(new CourseService(167,"Computer",5));
-        CourseList.add(new CourseService(182,"python",7));
-        CourseList.add(new CourseService(556,"fullstack",9));
-
-        return new ResponseEntity<>(CourseList, HttpStatus.OK);
+    @GetMapping("/gc")
+    public ResponseEntity<List<Course>> getAllCourse(){
+        return ResponseEntity.ok(courseList);
     }
-    @GetMapping("coursequery")
-    public ResponseEntity<CourseService> courseResponseEntity(@RequestParam int coursecode,
-                                                       @RequestParam String subName,
-                                                       @RequestParam int credits){
+    //http://localhost:8080/course/gc/CS105
+    @GetMapping("/gc/{courseCode}")
+    public ResponseEntity<Course> getCourse(@PathVariable String courseCode){
+        return courseList.stream().filter(c->c.getCourseCode().equalsIgnoreCase(courseCode))
+                .findFirst().map(ResponseEntity::ok).orElseThrow(()->new ResourceNotFoundException("Course","CourseCode",courseCode));
+    }
+    @GetMapping("/courses")
+    public ResponseEntity<List<Course>> getCourses(){
+        return new ResponseEntity<>(courseList, HttpStatus.OK);
+    }
 
-        CourseService course = new CourseService(coursecode,subName,credits);
+    //http://localhost:8080/course/CS106/Js/3
+    @GetMapping("/course/{course-code}/{subject-name}/{credits}")
+    public ResponseEntity<Course>coursePathVariable(@PathVariable("course-code") String courseCode,
+                                                    @PathVariable("subject-name")String subjectName,
+                                                    @PathVariable("credits")int credits)
+    {
+        Course course =new Course(courseCode,subjectName,credits);
+        return new ResponseEntity<>(course,HttpStatus.OK);
+    }
+
+    //http://localhost:8080/cquery?courseCode=103&subjectName=Java&credits=4
+    @GetMapping("cquery")
+    public ResponseEntity<Course>courseRequestVariable(@RequestParam String courseCode,
+                                                       @RequestParam String subjectName,
+                                                       @RequestParam int credits)
+    {
+        Course course=new Course(courseCode,subjectName,credits);
         return ResponseEntity.ok(course);
     }
 
-    @PostMapping("createcourse")
-    public ResponseEntity<CourseService> createCourse(@RequestBody CourseService courseService){
-
-        System.out.println(courseService.getCourseCode());
-        System.out.println(courseService.getSubName());
-        System.out.println(courseService.getCredits());
-        return ResponseEntity.ok(courseService);
+    //http://localhost:8080/cc
+    @PostMapping("cc")
+    public ResponseEntity<Course> createCourse(@RequestBody Course course){
+        courseList.add(course);
+        return ResponseEntity.ok(course);
     }
 
-    @PutMapping("{coursecode}/update")
-    public ResponseEntity updateCourse(@PathVariable("coursecode") int coursecode,
-                                       @RequestBody CourseService courseService){
-        return ResponseEntity.accepted().body(courseService);
+    @PutMapping("{courseCode}/upd")
+    public ResponseEntity updateCourse(@PathVariable("courseCode") String courseCode,
+                                       @RequestBody Course updateCourse){
+
+        Course course=courseList.stream().filter(c->c.getCourseCode().equalsIgnoreCase(courseCode))
+                .findFirst().orElse(null);
+        course.setCourseCode(updateCourse.getCourseCode());
+        course.setCredits(updateCourse.getCredits());
+        return ResponseEntity.accepted().body(course);
     }
-    @DeleteMapping("{coursecode}/delete")
-    public ResponseEntity deleteCourse(@PathVariable("coursecode") int coursecode){
-        return ResponseEntity.ok(courseService);
+
+    @DeleteMapping("/{courseCode}/del")
+    public ResponseEntity deleteCourse(
+            @PathVariable("courseCode") String courseCode) {
+        Course course=courseList.stream().filter(c->c.getCourseCode().equalsIgnoreCase(courseCode))
+                .findFirst().orElse(null);
+        courseList.remove(course);
+        return ResponseEntity.accepted().body("deleted successfully");
     }
+  @PutMapping("/query/{code}")
+    public String queryCOurse(@PathVariable String code)  {
+        if(code.startsWith("*")){
+            throw new IllegalArgumentException("It is having special character");
+        }
+        else if(code.startsWith("6")){
+            throw new RuntimeException();
+        }
+        return code;
+
+  }
 }
